@@ -203,7 +203,16 @@
       will-change: transform;
     }
     .offer.is-active { display: block; z-index: 2; }
+    .offer.is-under {
+      display: block;
+      z-index: 1;
+      pointer-events: none;
+      opacity: var(--under-opacity, .78);
+      transform: translate3d(0, var(--under-y, 12px), 0) scale(var(--under-scale, .965));
+      box-shadow: 0 12px 34px color-mix(in oklab, var(--fg) 12%, transparent);
+    }
     .offer-list.is-swiping .offer.is-active { transition: none; }
+    .offer-list.is-swiping .offer.is-under { transition: none; }
     .offer.is-leaving { opacity: 0; }
     .offer-product { cursor: pointer; }
     .welcome-card.is-active { display: flex; flex-direction: column; background: var(--bg); }
@@ -692,12 +701,33 @@
         card.style.setProperty('--swipe-tilt', '0deg');
       }
 
+      function underIndexFor(direction = 1) {
+        const cards = visibleCards();
+        if (direction < 0 && activeCardIndex > 0) return activeCardIndex - 1;
+        if (activeCardIndex < cards.length - 1) return activeCardIndex + 1;
+        return activeCardIndex > 0 ? activeCardIndex - 1 : -1;
+      }
+
+      function showUnderCard(direction = 1, progress = 0) {
+        const cards = visibleCards();
+        const underIndex = underIndexFor(direction);
+        cards.forEach((card, index) => card.classList.toggle('is-under', index === underIndex && index !== activeCardIndex));
+        const under = cards[underIndex];
+        if (!under) return;
+        const reveal = Math.max(0, Math.min(1, progress));
+        under.style.setProperty('--under-scale', String(.965 + reveal * .035));
+        under.style.setProperty('--under-y', `${12 - reveal * 12}px`);
+        under.style.setProperty('--under-opacity', String(.78 + reveal * .22));
+      }
+
       function renderActive() {
         visibleCards().forEach((card, index) => {
           card.classList.toggle('is-active', index === activeCardIndex);
+          card.classList.remove('is-under');
           card.classList.remove('is-leaving');
           resetTransform(card);
         });
+        showUnderCard(1, 0);
         updateSwipeState();
       }
 
@@ -706,6 +736,7 @@
         const limitedX = Math.max(-list.clientWidth, Math.min(list.clientWidth, deltaX));
         const progress = limitedX / Math.max(1, list.clientWidth);
         const arc = -Math.pow(Math.abs(progress), 1.35) * 42;
+        showUnderCard(limitedX > 0 ? -1 : 1, Math.abs(progress));
         card.style.setProperty('--swipe-x', `${limitedX}px`);
         card.style.setProperty('--swipe-arc', `${arc}px`);
         card.style.setProperty('--swipe-tilt', `${progress * 12}deg`);
@@ -717,8 +748,10 @@
         const card = activeCard();
         if (!direction || nextIndex === activeCardIndex) {
           resetTransform(card);
+          showUnderCard(1, 0);
           return;
         }
+        showUnderCard(direction, 1);
         card.classList.add('is-leaving');
         card.style.setProperty('--swipe-x', `${direction > 0 ? -window.innerWidth * 1.2 : window.innerWidth * 1.2}px`);
         card.style.setProperty('--swipe-arc', '-70px');
