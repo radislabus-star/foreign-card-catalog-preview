@@ -132,7 +132,7 @@
 
     .controls {
       position: sticky;
-      top: 60px;
+      top: 0;
       z-index: 40;
       padding-block: 10px;
       background: color-mix(in oklab, var(--bg) 96%, transparent);
@@ -204,7 +204,12 @@
       background: var(--bg);
       scroll-snap-align: center;
       scroll-snap-stop: always;
+      transform: rotate(var(--swipe-tilt, 0deg)) scale(var(--swipe-scale, 1));
+      transform-origin: 50% 88%;
+      transition: transform 90ms linear;
+      will-change: transform;
     }
+    .offer-list.is-swiping .offer { transition: none; }
     .offer.is-pending { display: none; }
     .offer-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: start; }
     .status-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 7px; }
@@ -310,7 +315,7 @@
       .offer-total { display: inline-flex; align-items: baseline; gap: 7px; padding: 8px 11px; border-radius: 11px; }
       .offer-total strong { font-size: 22px; }
       .offer-total span { margin-top: 0; font-size: 10px; line-height: 1.2; }
-      .controls { top: 56px; padding-block: 8px; }
+      .controls { top: 0; padding-block: 8px; }
       .toolbar { grid-template-columns: minmax(0, 1fr) 44px 112px; gap: 6px; }
       .search input, .sort-select, .filter-button { min-height: 44px; }
       .search input { padding-left: 40px; font-size: 13px; }
@@ -358,20 +363,6 @@
   </style>
 </head>
 <body>
-  <header class="topbar" data-od-id="catalog-topbar">
-    <div class="container topbar-inner">
-      <a class="brand" href="#catalog-start" data-od-id="catalog-brand" aria-label="Карты за границей — к началу каталога">
-        <span class="brand-mark" aria-hidden="true">КЗ</span>
-        <span class="brand-name"><span class="brand-full">Карты за границей</span><span class="brand-short">Каталог карт</span></span>
-      </a>
-      <button class="compare-open" type="button" data-od-id="open-comparison" disabled>
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 4v16M17 4v16M3 8h8M13 16h8"/></svg>
-        <span class="compare-label">Сравнение</span>
-        <span class="count-badge compare-count">0</span>
-      </button>
-    </div>
-  </header>
-
   <main id="catalog-start">
     <section class="intro" data-od-id="catalog-intro">
       <div class="container intro-row">
@@ -767,6 +758,17 @@
         swipeNext.disabled = activeCardIndex === visible.length - 1;
       }
 
+      function updateCardTilt() {
+        const listCenter = list.scrollLeft + list.clientWidth / 2;
+        const range = Math.max(1, list.clientWidth * .72);
+        visibleOffers().forEach((offer) => {
+          const cardCenter = offer.offsetLeft + offer.offsetWidth / 2;
+          const progress = Math.max(-1, Math.min(1, (cardCenter - listCenter) / range));
+          offer.style.setProperty('--swipe-tilt', `${progress * 7}deg`);
+          offer.style.setProperty('--swipe-scale', String(1 - Math.abs(progress) * .025));
+        });
+      }
+
       function applyView() {
         offers.forEach((offer) => {
           const show = matches(offer);
@@ -777,7 +779,7 @@
         resultCount.textContent = totalMatches;
         resultWord.textContent = wordForCount(totalMatches);
         list.scrollTo({ left: 0, behavior: 'auto' });
-        requestAnimationFrame(updateSwipeState);
+        requestAnimationFrame(() => { updateSwipeState(); updateCardTilt(); });
       }
 
       function sortOffers() {
@@ -824,8 +826,10 @@
       let swipeFrame = 0;
       list.addEventListener('scroll', () => {
         cancelAnimationFrame(swipeFrame);
-        swipeFrame = requestAnimationFrame(updateSwipeState);
+        swipeFrame = requestAnimationFrame(() => { updateSwipeState(); updateCardTilt(); });
       }, { passive: true });
+      list.addEventListener('pointerdown', () => list.classList.add('is-swiping'));
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach((eventName) => list.addEventListener(eventName, () => list.classList.remove('is-swiping')));
       function goToCard(offset) {
         const visible = visibleOffers();
         const targetIndex = Math.max(0, Math.min(visible.length - 1, activeCardIndex + offset));
@@ -833,7 +837,7 @@
       }
       swipePrev.addEventListener('click', () => goToCard(-1));
       swipeNext.addEventListener('click', () => goToCard(1));
-      window.addEventListener('resize', updateSwipeState);
+      window.addEventListener('resize', () => { updateSwipeState(); updateCardTilt(); });
 
       function comparisonData(offer) {
         const metrics = [...offer.querySelectorAll('.key-metric')].map((node) => [node.querySelector('.metric-label').textContent, node.querySelector('.metric-value').textContent]);
