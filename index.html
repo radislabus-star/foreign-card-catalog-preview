@@ -231,6 +231,8 @@
     .status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
     .status-review { color: var(--warn); background: color-mix(in oklab, var(--warn) 12%, var(--bg)); }
     .status-candidate { color: var(--muted); background: var(--surface); }
+    .status-stale { color: var(--warn); background: color-mix(in oklab, var(--warn) 12%, var(--bg)); }
+    .status-rejected { color: var(--danger); background: color-mix(in oklab, var(--danger) 10%, var(--bg)); }
     .status-conflict { color: var(--danger); background: color-mix(in oklab, var(--danger) 10%, var(--bg)); }
     .updated { color: var(--muted); font-size: 11px; }
     .offer h2 { font-size: 24px; line-height: 1.1; letter-spacing: -.35px; }
@@ -389,7 +391,7 @@
               <p class="eyebrow">Независимый каталог · гражданам РФ</p>
               <h1>Карты для оплаты за границей</h1>
               <p class="intro-copy">Сверяем стоимость, российский паспорт, эмитента и ограничения. Без рекламных обещаний.</p>
-              <div class="offer-total"><strong class="num">10</strong><span>предложений в базе</span></div>
+              <div class="offer-total"><strong class="num" id="offer-total-count">0</strong><span id="offer-total-label">предложений в базе</span></div>
             </div>
             <div class="welcome-action"><span><strong>Свайпните влево</strong><br />смотреть первую карту</span><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></div>
           </article>
@@ -413,198 +415,79 @@
 
   <script>
     (() => {
+      const makeProduct = (id, name, provider, issuer, status, passport, issue, service, type, network, capabilities, affiliate, price, conflict = false, details = null) => ({
+        id, name, provider, issuer, status, conflict, passport, issue, service,
+        type, network, capabilities, affiliate, price, rank: Number(id.slice(4)),
+        tags: [type.includes('Виртуальная') ? 'virtual' : '', conflict ? 'conflict' : ''].filter(Boolean),
+        details: details || `card.html?id=${id}`
+      });
+
       const products = [
-        {
-          id: 'CARD-001',
-          name: 'Wanttopay Smart',
-          provider: 'WTP Technology Limited · Wanttopay',
-          issuer: 'Эмитент не раскрыт',
-          status: 'review',
-          conflict: false,
-          passport: 'Не подтверждено',
-          issue: '1 590 ₽ / $15',
-          service: '$6 / мес.',
-          type: 'Виртуальная',
-          network: 'Не подтверждено',
-          capabilities: 'Заявлено: Apple Pay · Google Pay · 3D Secure',
-          tags: ['virtual'],
-          price: 1590,
-          rank: 1,
-          page: 1,
-          details: 'wanttopay-smart.html'
-        },
-        {
-          id: 'CARD-002',
-          name: 'Wanttopay Easy',
-          provider: 'WTP Technology Limited · Wanttopay',
-          issuer: 'Эмитент не раскрыт',
-          status: 'candidate',
-          conflict: false,
-          passport: 'Не подтверждено',
-          issue: '990 ₽ / $10',
-          service: '$6 / мес. · первый месяц бесплатно',
-          type: 'Виртуальная',
-          network: 'Не подтверждено',
-          capabilities: 'Онлайн-платежи · первый месяц обслуживания бесплатно',
-          tags: ['virtual'],
-          price: 990,
-          rank: 2,
-          page: 1,
-          details: 'card.html?id=CARD-002'
-        },
-        {
-          id: 'CARD-003',
-          name: 'Плати по миру — Для подписок',
-          provider: 'ООО «КАПИБАРА» · Плати по миру',
-          issuer: 'Эмитент не раскрыт',
-          status: 'candidate',
-          conflict: false,
-          passport: 'Не подтверждено',
-          issue: '2 990 ₽',
-          service: 'Первый год бесплатно',
-          type: 'Не подтверждено',
-          network: 'Не подтверждено',
-          capabilities: 'Заявлено: СБП 0 ₽ · 3D Secure в приложении',
-          tags: [],
-          price: 2990,
-          rank: 3,
-          page: 1,
-          details: 'card.html?id=CARD-003'
-        },
-        {
-          id: 'CARD-004',
-          name: 'Плати по миру — Для путешествий',
-          provider: 'ООО «КАПИБАРА» · Плати по миру',
-          issuer: 'Эмитент не раскрыт',
-          status: 'candidate',
-          conflict: false,
-          passport: 'Не подтверждено',
-          issue: '3 990 ₽',
-          service: 'Первый год бесплатно',
-          type: 'Не подтверждено',
-          network: 'Не подтверждено',
-          capabilities: 'Заявлено: Apple Pay · Google Pay · Alipay · WeChat',
-          tags: [],
-          price: 3990,
-          rank: 4,
-          page: 1,
-          details: 'card.html?id=CARD-004'
-        },
-        {
-          id: 'CARD-005',
-          name: 'Плати по миру — Премиальная',
-          provider: 'ООО «КАПИБАРА» · Плати по миру',
-          issuer: 'Эмитент не раскрыт',
-          status: 'candidate',
-          conflict: false,
-          passport: 'Не подтверждено',
-          issue: '14 990 ₽',
-          service: 'Первый год бесплатно',
-          type: 'Не подтверждено',
-          network: 'Не подтверждено',
-          capabilities: 'Заявлено: выделенная поддержка · повышенный лимит',
-          tags: [],
-          price: 14990,
-          rank: 5,
-          page: 2,
-          details: 'card.html?id=CARD-005'
-        },
-        {
-          id: 'CARD-006',
-          name: 'SKYZIT Онлайн',
-          provider: 'SKYZIT',
-          issuer: 'Эмитент не раскрыт',
-          status: 'candidate',
-          conflict: true,
-          passport: 'Заявляет посредник',
-          issue: '41 990 ₽ официальный сайт · 36 990 ₽ Банки.ру',
-          service: 'Не подтверждено',
-          type: 'Не подтверждено',
-          network: 'Не подтверждено',
-          capabilities: 'Заявляет посредник: удалённое оформление по паспорту РФ или загранпаспорту',
-          tags: ['conflict'],
-          price: 36990,
-          rank: 6,
-          page: 2,
-          details: 'card.html?id=CARD-006'
-        },
-        {
-          id: 'CARD-007',
-          name: 'SKYZIT Комфорт',
-          provider: 'SKYZIT',
-          issuer: 'Эмитент не раскрыт',
-          status: 'candidate',
-          conflict: true,
-          passport: 'Заявляет посредник',
-          issue: '44 990 ₽ официальный сайт · 39 990 ₽ Банки.ру',
-          service: 'Не подтверждено',
-          type: 'Не подтверждено',
-          network: 'Не подтверждено',
-          capabilities: 'Заявляет посредник: удалённое оформление по паспорту РФ или загранпаспорту',
-          tags: ['conflict'],
-          price: 39990,
-          rank: 7,
-          page: 2,
-          details: 'card.html?id=CARD-007'
-        },
-        {
-          id: 'CARD-008',
-          name: 'Halyk Bonus Digital',
-          provider: 'Halyk Bank',
-          issuer: 'Halyk Bank',
-          status: 'candidate',
-          conflict: false,
-          passport: 'Не подтверждено',
-          issue: 'Не подтверждено',
-          service: '0 ₸ для digital',
-          type: 'Виртуальная / digital',
-          network: 'Не подтверждено',
-          capabilities: 'KZT · USD · EUR · Apple Pay · Google Pay · Samsung Pay',
-          tags: ['virtual', 'known-issuer'],
-          price: 999999999,
-          rank: 8,
-          page: 3,
-          details: 'card.html?id=CARD-008'
-        },
-        {
-          id: 'CARD-009',
-          name: 'Ipak Yuli Visa Start Currency',
-          provider: 'Ipak Yuli Bank',
-          issuer: 'Ipak Yuli Bank',
-          status: 'candidate',
-          conflict: false,
-          passport: 'Не подтверждено',
-          issue: '0 UZS',
-          service: '0 UZS',
-          type: 'Физическая',
-          network: 'Visa',
-          capabilities: 'Заказ в приложении · доставка · комиссия за оплату 0%',
-          tags: ['physical', 'known-issuer'],
-          price: 0,
-          rank: 9,
-          page: 3,
-          details: 'card.html?id=CARD-009'
-        },
-        {
-          id: 'CARD-010',
-          name: 'Visa OptimaGOLD',
-          provider: 'Optima Bank',
-          issuer: 'Optima Bank',
-          status: 'candidate',
-          conflict: false,
-          passport: 'Не подтверждено',
-          issue: 'Бесплатно',
-          service: 'Первый год бесплатно',
-          type: 'Не подтверждено',
-          network: 'Visa',
-          capabilities: 'Снятие до 100 000 сом/мес. без комиссии в банкоматах КР',
-          tags: ['known-issuer'],
-          price: 0,
-          rank: 10,
-          page: 3,
-          details: 'card.html?id=CARD-010'
-        }
+        makeProduct('AFF-001', 'Wanttopay Prepaid', 'WTP Technology Limited · Wanttopay', 'Эмитент не раскрыт', 'candidate', 'KYC не заявлен', '0 ₽ · депозит $10', 'Не подтверждено', 'Виртуальная', 'Не подтверждено', 'Оплата зарубежных сервисов', 'Direct · $0.12–5.63 · не одобрена', 0),
+        makeProduct('AFF-002', 'Wanttopay Easy', 'WTP Technology Limited · Wanttopay', 'Эмитент не раскрыт', 'candidate', 'KYC не заявлен', '990 ₽', '$6 / мес.', 'Виртуальная', 'Не подтверждено', 'Онлайн-платежи', 'Direct · 25% + 10% подписки · не одобрена', 990),
+        makeProduct('AFF-003', 'Wanttopay Smart', 'WTP Technology Limited · Wanttopay', 'Эмитент не раскрыт', 'review', 'KYC не заявлен', '1 590 ₽', '$6 / мес.', 'Виртуальная', 'Не подтверждено', 'Apple Pay · Google Pay · 3D Secure — заявление', 'Direct · 25% + 10% подписки · не одобрена', 1590, true, 'wanttopay-smart.html'),
+        makeProduct('AFF-004', 'Wanttopay Pro', 'WTP Technology Limited · Wanttopay', 'Эмитент не раскрыт', 'candidate', 'KYC не заявлен', '3 490 ₽', '$6 / мес.', 'Виртуальная', 'Не подтверждено', 'Оплата зарубежных сервисов', 'Direct · 25% + 10% подписки · не одобрена', 3490),
+
+        makeProduct('AFF-005', 'Плати по миру — премиальная виртуальная', 'ООО «КАПИБАРА» · Плати по миру', 'Эмитент не раскрыт', 'review', 'Заявляет посредник', 'Тариф не сопоставлен', 'Не подтверждено', 'Виртуальная', 'Не подтверждено', 'Целевой тариф оффера требует проверки', 'Saleads · 3 000 ₽ · не одобрена', 999999999),
+
+        makeProduct('AFF-006', 'Travel People Visa Platinum — Кыргызстан', 'Travel People', 'Банк скрыт', 'candidate', 'Заявляет посредник', '20 499 ₽', 'Не подтверждено', 'Физическая', 'Visa', 'Кредитный BIN', 'Direct · 4 000 ₽ · не одобрена', 20499),
+        makeProduct('AFF-007', 'Travel People Visa Platinum Business', 'Travel People', 'Страна и банк скрыты', 'review', 'Заявляет посредник', '35 999 ₽', 'Не подтверждено', 'Физическая · Business', 'Visa', 'Кредитный BIN', 'Direct · 4 000 ₽ · не одобрена', 35999),
+        makeProduct('AFF-008', 'Travel People Visa Gold — Кыргызстан', 'Travel People', 'Банк скрыт', 'candidate', 'Заявляет посредник', '27 499 ₽', 'Не подтверждено', 'Физическая · именная', 'Visa', 'SWIFT — заявление посредника', 'Direct · 5 000 ₽ · не одобрена', 27499),
+
+        makeProduct('AFF-009', 'PeoplePay — Киргизия', 'PeoplePay', 'АКБ «Кыргызстан» — заявление', 'review', 'Заявляет посредник', 'от 29 800 ₽', 'Не подтверждено', 'Не подтверждено', 'Visa — заявление', 'Удалённое сопровождение', 'Referral до 3 000 ₽ · не одобрена', 29800),
+        makeProduct('AFF-010', 'PeoplePay — Таджикистан', 'PeoplePay', '«Эсхата» — точный тариф не доказан', 'review', 'Заявляет посредник', 'от 29 800 ₽', 'Не подтверждено', 'Не подтверждено', 'Visa — заявление', 'Удалённое сопровождение', 'Referral до 3 000 ₽ · не одобрена', 29800),
+        makeProduct('AFF-011', 'PeoplePay — Казахстан', 'PeoplePay', 'Эмитент не подтверждён', 'review', 'Заявляет посредник', 'от 19 400 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Удалённое сопровождение', 'Referral до 3 000 ₽ · не одобрена', 19400),
+        makeProduct('AFF-012', 'PeoplePay — Беларусь', 'PeoplePay', 'Эмитент не подтверждён', 'review', 'Заявляет посредник', 'от 29 800 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Удалённое сопровождение', 'Referral до 3 000 ₽ · не одобрена', 29800),
+        makeProduct('AFF-013', 'PeoplePay — Турция', 'PeoplePay', 'Эмитент не подтверждён', 'review', 'Заявляет посредник', 'от 54 800 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Удалённое сопровождение', 'Referral до 3 000 ₽ · не одобрена', 54800),
+        makeProduct('AFF-014', 'PeoplePay — Армения', 'PeoplePay', 'Эмитент не подтверждён', 'review', 'Заявляет посредник', 'от 28 700 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Удалённое сопровождение', 'Referral до 3 000 ₽ · не одобрена', 28700),
+        makeProduct('AFF-015', 'PeoplePay — Молдова', 'PeoplePay', 'Эмитент не подтверждён', 'review', 'Заявляет посредник', 'от 28 700 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Удалённое сопровождение', 'Referral до 3 000 ₽ · не одобрена', 28700),
+        makeProduct('AFF-016', 'PeoplePay — Азербайджан', 'PeoplePay', 'Эмитент не подтверждён', 'review', 'Заявляет посредник', 'от 28 700 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Удалённое сопровождение', 'Referral до 3 000 ₽ · не одобрена', 28700),
+        makeProduct('AFF-017', 'PeoplePay — Мексика', 'PeoplePay', 'Эмитент не подтверждён', 'review', 'Заявляет посредник', 'от 6 900 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Удалённое сопровождение', 'Referral до 3 000 ₽ · не одобрена', 6900),
+
+        makeProduct('AFF-018', 'Globalbanka — Глобал Старт', 'Globalbanka', 'Банк скрыт', 'review', 'Заявляет посредник', '14 900 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Условия тарифа требуют проверки', 'Direct · условия выплаты закрыты', 14900),
+        makeProduct('AFF-019', 'Globalbanka — Глобал Крипто plus', 'Globalbanka', 'Банк скрыт', 'review', 'Заявляет посредник', '14 900 ₽', 'Не подтверждено', 'Виртуальная', 'Не подтверждено', 'Крипто-пополнение — заявление', 'Direct · условия выплаты закрыты', 14900),
+        makeProduct('AFF-020', 'Globalbanka — Глобал Премиум', 'Globalbanka', 'Банк скрыт', 'review', 'Заявляет посредник', '19 900 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Условия тарифа требуют проверки', 'Direct · условия выплаты закрыты', 19900),
+        makeProduct('AFF-021', 'Globalbanka — Глобал Виртуальная', 'Globalbanka', 'Банк скрыт', 'review', 'Заявляет посредник', '19 900 ₽', 'Не подтверждено', 'Виртуальная', 'Не подтверждено', 'Онлайн-платежи', 'Direct · условия выплаты закрыты', 19900),
+        makeProduct('AFF-022', 'Globalbanka — Глобал Мультивалютный', 'Globalbanka', 'Банк скрыт', 'review', 'Заявляет посредник', '19 900 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Мультивалютность — заявление', 'Direct · условия выплаты закрыты', 19900),
+        makeProduct('AFF-023', 'Globalbanka — Глобал Стандарт', 'Globalbanka', 'Банк скрыт', 'review', 'Заявляет посредник', '19 900 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Условия тарифа требуют проверки', 'Direct · условия выплаты закрыты', 19900),
+        makeProduct('AFF-024', 'Globalbanka — Глобал Крипто plus', 'Globalbanka', 'Банк скрыт', 'review', 'Заявляет посредник', '24 900 ₽', 'Не подтверждено', 'Физическая', 'Не подтверждено', 'Крипто-пополнение — заявление', 'Direct · условия выплаты закрыты', 24900),
+        makeProduct('AFF-025', 'Globalbanka — Глобал Привилегии', 'Globalbanka', 'Банк скрыт', 'review', 'Заявляет посредник', '29 900 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Условия тарифа требуют проверки', 'Direct · условия выплаты закрыты', 29900),
+        makeProduct('AFF-026', 'Globalbanka — Глобал Альянс', 'Globalbanka', 'Банк скрыт', 'review', 'Заявляет посредник', '29 900 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Условия тарифа требуют проверки', 'Direct · условия выплаты закрыты', 29900),
+        makeProduct('AFF-027', 'Globalbanka — Глобал Оптимальный', 'Globalbanka', 'Банк скрыт', 'review', 'Заявляет посредник', '29 900 ₽', 'Не подтверждено', 'С доверенностью', 'Не подтверждено', 'Оформление по доверенности', 'Direct · условия выплаты закрыты', 29900),
+        makeProduct('AFF-028', 'Globalbanka — Глобал Фаст', 'Globalbanka', 'Банк скрыт', 'review', 'Заявляет посредник', '29 900 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Ускоренное оформление — заявление', 'Direct · условия выплаты закрыты', 29900),
+        makeProduct('AFF-029', 'Globalbanka — Глобал Баланс', 'Globalbanka', 'Банк скрыт', 'review', 'Заявляет посредник', '31 900 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Условия тарифа требуют проверки', 'Direct · условия выплаты закрыты', 31900),
+        makeProduct('AFF-030', 'Globalbanka — Глобал Оптимальный', 'Globalbanka', 'Банк скрыт', 'review', 'Заявляет посредник', '35 900 ₽', 'Не подтверждено', 'Без доверенности', 'Не подтверждено', 'Оформление без доверенности', 'Direct · условия выплаты закрыты', 35900),
+        makeProduct('AFF-031', 'Globalbanka — Глобал Финанс', 'Globalbanka', 'Банк скрыт', 'review', 'Заявляет посредник', '39 900 ₽', 'Не подтверждено', 'Не подтверждено', 'Не подтверждено', 'Условия тарифа требуют проверки', 'Direct · условия выплаты закрыты', 39900),
+
+        makeProduct('AFF-032', '5KART Банк 6 — Visa Gold', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Таджикистан', 'review', 'Заявляет посредник', '14 900 ₽', '$18 / год', 'Физическая · неименная', 'Visa', '1 день · без доверенности · TJS', 'Direct · выплата публично не указана', 14900),
+        makeProduct('AFF-033', '5KART Банк 6 — Visa Virtual', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Таджикистан', 'review', 'Заявляет посредник', '9 900 ₽', '$5–18 / год', 'Виртуальная · неименная', 'Visa', '1 день · без доверенности · TJS', 'Direct · выплата публично не указана', 9900, true),
+        makeProduct('AFF-034', '5KART Банк 6 — Visa Platinum', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Таджикистан', 'review', 'Заявляет посредник', '14 900 ₽', '$36 / год', 'Физическая · неименная', 'Visa', '1 день · без доверенности · TJS', 'Direct · выплата публично не указана', 14900),
+        makeProduct('AFF-035', '5KART Банк 6 — Express Pay', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Таджикистан', 'review', 'Заявляет посредник', '14 900 ₽', 'Бесплатно', 'Физическая · именная', 'Не подтверждено', '1 день · без доверенности · RUB · СБП', 'Direct · выплата публично не указана', 14900),
+
+        makeProduct('AFF-036', '5KART Банк 9 — Visa Classic', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Кыргызстан', 'review', 'Заявляет посредник', '24 500 ₽', '$30 / год', 'Физическая · неименная', 'Visa', '1–3 дня · без доверенности · USD', 'Direct · выплата публично не указана', 24500),
+        makeProduct('AFF-037', '5KART Банк 9 — Visa Gold', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Кыргызстан', 'review', 'Заявляет посредник', '24 500 ₽', '$50 / год', 'Физическая · неименная', 'Visa', '1–3 дня · без доверенности · USD', 'Direct · выплата публично не указана', 24500),
+        makeProduct('AFF-038', '5KART Банк 9 — Visa Gold именная', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Кыргызстан', 'review', 'Заявляет посредник', '29 500 ₽', '$50 / год', 'Физическая · именная', 'Visa', '5–7 дней · кредитный BIN · USD', 'Direct · выплата публично не указана', 29500),
+        makeProduct('AFF-039', '5KART Банк 9 — Visa Platinum', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Кыргызстан', 'review', 'Заявляет посредник', '29 500 ₽', '$100 / год', 'Физическая · именная', 'Visa', '5–7 дней · кредитный BIN · USD', 'Direct · выплата публично не указана', 29500),
+
+        makeProduct('AFF-040', '5KART Банк 1 — Gold', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Кыргызстан', 'review', 'Заявляет посредник', '19 500 ₽', 'со 2-го года $100', 'Физическая · именная', 'Visa / Mastercard', 'SWIFT · ВНЖ · нужна доверенность', 'Direct · выплата публично не указана', 19500),
+        makeProduct('AFF-041', '5KART Банк 1 — Visa Platinum', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Кыргызстан', 'review', 'Заявляет посредник', '19 500 ₽', 'со 2-го года $250', 'Физическая · именная', 'Visa', 'SWIFT · ВНЖ · нужна доверенность', 'Direct · выплата публично не указана', 19500),
+
+        makeProduct('AFF-042', '5KART Банк 3 — Mastercard Gold', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название и страна банка скрыты · СНГ', 'review', 'Заявляет посредник', '27 500–34 500 ₽', 'со 2-го года $20', 'Физическая · именная', 'Mastercard', 'SWIFT · кредитный BIN · EUR', 'Direct · выплата публично не указана', 27500),
+        makeProduct('AFF-043', '5KART Банк 3 — Visa Gold', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название и страна банка скрыты · СНГ', 'review', 'Заявляет посредник', '27 500–34 500 ₽', 'со 2-го года $20', 'Физическая · именная', 'Visa', 'SWIFT · кредитный BIN · USD', 'Direct · выплата публично не указана', 27500),
+        makeProduct('AFF-044', '5KART Банк 3 — Visa Platinum', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название и страна банка скрыты · СНГ', 'review', 'Заявляет посредник', '27 500–34 500 ₽', 'со 2-го года $100', 'Физическая · именная', 'Visa', 'SWIFT · кредитный BIN · USD', 'Direct · выплата публично не указана', 27500),
+
+        makeProduct('AFF-045', '5KART Банк 4 — Mastercard Virtual', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Армения', 'review', 'Заявляет посредник', '29 500 ₽', '$27 / год', 'Виртуальная · именная', 'Mastercard', 'Apple Pay · Google Pay · без доверенности', 'Direct · выплата публично не указана', 29500),
+        makeProduct('AFF-046', '5KART Банк 4 — Mastercard Gold', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Армения', 'review', 'Заявляет посредник', '29 500 ₽', '$108 / год', 'Физическая · именная', 'Mastercard', 'Apple Pay · Google Pay · кредитный BIN', 'Direct · выплата публично не указана', 29500),
+        makeProduct('AFF-047', '5KART Банк 4 — Mastercard Standard', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Армения', 'review', 'Заявляет посредник', '29 500 ₽', '$54 / год', 'Физическая · именная', 'Mastercard', 'Apple Pay · Google Pay · кредитный BIN', 'Direct · выплата публично не указана', 29500),
+        makeProduct('AFF-048', '5KART Банк 4 — Mastercard World Elite', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Армения', 'review', 'Заявляет посредник', '29 500 ₽', '$350 / год', 'Физическая · именная', 'Mastercard', 'Кредитный BIN · снятие 0% — заявление', 'Direct · выплата публично не указана', 29500),
+        makeProduct('AFF-049', '5KART Банк 4 — Mastercard Travel World', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Армения', 'review', 'Заявляет посредник', '29 500 ₽', '$162 / год', 'Физическая · именная', 'Mastercard', 'Кредитный BIN · аренда авто', 'Direct · выплата публично не указана', 29500),
+
+        makeProduct('AFF-050', '5KART Банк 5 — Visa Gold', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Кыргызстан', 'review', 'Заявляет посредник', '17 500 ₽', '$145 первый год · далее $50', 'Физическая · именная', 'Visa', 'Входящий SWIFT · ВНЖ · нужна доверенность', 'Direct · выплата публично не указана', 17500),
+        makeProduct('AFF-051', '5KART Банк 8 — Visa Platinum', 'ООО «СОЗВЕЗДИЕ» · 5KART', 'Название банка скрыто · Таджикистан', 'review', 'Заявляет посредник', '49 500 ₽', '$20 / год', 'Физическая · именная', 'Visa', 'SWIFT по запросу · кредитный BIN', 'Direct · выплата публично не указана', 49500)
       ];
+
+      document.querySelector('#offer-total-count').textContent = products.length;
+      document.querySelector('#offer-total-label').textContent = `${wordForCount(products.length)} в базе`;
 
       const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({
         '&': '&amp;',
@@ -617,7 +500,7 @@
       const list = document.querySelector('#offer-list');
       list.insertAdjacentHTML('beforeend', products.map((product) => {
         const slug = product.id.toLowerCase();
-        const statusLabel = product.status === 'review' ? 'REVIEW' : 'CANDIDATE';
+        const statusLabel = ({ candidate: 'CANDIDATE', review: 'REVIEW', stale: 'STALE', rejected: 'REJECTED' })[product.status] || 'REVIEW';
         const statusBadges = `<span class="status status-${product.status}">${statusLabel}</span>${product.conflict ? '<span class="status status-conflict">CONFLICT</span>' : ''}`;
         const searchable = [product.name, product.provider, product.issuer, product.type, product.network, product.capabilities].join(' ');
         return `
@@ -644,7 +527,8 @@
             <div class="facts">
               <div class="fact"><span class="fact-label">Тип карты</span><span class="fact-value">${escapeHtml(product.type)}</span></div>
               <div class="fact"><span class="fact-label">Платёжная система</span><span class="fact-value">${escapeHtml(product.network)}</span></div>
-              <div class="fact fact-capabilities"><span class="fact-label">Главные возможности</span><span class="fact-value">${escapeHtml(product.capabilities)}</span></div>
+              <div class="fact"><span class="fact-label">Главные возможности</span><span class="fact-value">${escapeHtml(product.capabilities)}</span></div>
+              <div class="fact"><span class="fact-label">Партнёрская программа</span><span class="fact-value">${escapeHtml(product.affiliate)}</span></div>
             </div>
             <div class="offer-foot"><p class="evidence-note">Внешнее оформление заблокировано до проверки.</p><span class="updated">12.08.2026 · ${statusLabel}${product.conflict ? ' + CONFLICT' : ''}</span></div>
           </article>
