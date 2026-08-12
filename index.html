@@ -217,8 +217,14 @@
     .offer-list.is-swiping .offer.is-active { transition: none; }
     .offer-list.is-swiping .offer.is-under { transition: none; }
     .offer.is-leaving { pointer-events: none; }
+    .offer.is-returning {
+      display: block;
+      z-index: 3;
+      pointer-events: none;
+    }
     .offer-product { cursor: pointer; }
-    .welcome-card.is-active { display: flex; flex-direction: column; background: var(--bg); }
+    .welcome-card.is-active,
+    .welcome-card.is-returning { display: flex; flex-direction: column; background: var(--bg); }
     .welcome-mark { width: 46px; height: 46px; display: grid; place-items: center; margin-bottom: auto; border-radius: 15px; background: var(--fg); color: var(--bg); font-family: var(--font-mono); font-size: 14px; }
     .welcome-card h1 { margin-top: 28px; font-size: clamp(42px, 12vw, 68px); }
     .welcome-card .intro-copy { max-width: 34ch; }
@@ -563,6 +569,7 @@
       let swipeFrame = 0;
       let deckWidth = list.clientWidth;
       let underCard = null;
+      let returningCard = null;
       let isAnimating = false;
       let cardAnimation = null;
       const cardDeck = [welcomeCard, ...offers];
@@ -623,12 +630,48 @@
         under.style.opacity = String(.78 + reveal * .22);
       }
 
+      function clearReturningCard() {
+        if (!returningCard) return;
+        returningCard.classList.remove('is-returning');
+        resetTransform(returningCard);
+        returningCard = null;
+      }
+
+      function showReturningCard(progress = 0) {
+        const cards = visibleCards();
+        if (cards.length < 2) return;
+        const previousIndex = (activeCardIndex - 1 + cards.length) % cards.length;
+        const previous = cards[previousIndex];
+        if (returningCard !== previous) {
+          clearReturningCard();
+          returningCard = previous;
+          returningCard.classList.add('is-returning');
+        }
+        if (underCard) {
+          underCard.classList.remove('is-under');
+          resetTransform(underCard);
+          underCard = null;
+        }
+        const reveal = Math.max(0, Math.min(1, progress));
+        const entryDistance = Math.max(window.innerWidth, deckWidth) * 1.12;
+        const x = -entryDistance * (1 - reveal);
+        const y = -96 * (1 - reveal);
+        const rotation = -18 * (1 - reveal);
+        returningCard.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rotation}deg)`;
+        returningCard.style.opacity = '1';
+        const current = activeCard();
+        current.style.transform = `translate3d(0, ${reveal * 12}px, 0) scale(${1 - reveal * .035})`;
+        current.style.opacity = String(1 - reveal * .22);
+      }
+
       function renderActive() {
         underCard = null;
+        returningCard = null;
         visibleCards().forEach((card, index) => {
           card.classList.toggle('is-active', index === activeCardIndex);
           card.classList.remove('is-under');
           card.classList.remove('is-leaving');
+          card.classList.remove('is-returning');
           resetTransform(card);
         });
         showUnderCard(1, 0);
@@ -641,8 +684,14 @@
         const card = activeCard();
         const limitedX = Math.max(-deckWidth, Math.min(deckWidth, deltaX));
         const progress = limitedX / Math.max(1, deckWidth);
+        if (limitedX > 0) {
+          showReturningCard(progress);
+          return;
+        }
+        clearReturningCard();
+        resetTransform(card);
         const arc = -Math.pow(Math.abs(progress), 1.35) * 42;
-        showUnderCard(limitedX > 0 ? -1 : 1, Math.abs(progress));
+        showUnderCard(1, Math.abs(progress));
         card.style.transform = `translate3d(${limitedX}px, ${arc}px, 0) rotate(${progress * 12}deg)`;
       }
 
@@ -679,6 +728,29 @@
         window.setTimeout(finish, duration + 100);
       }
 
+      function animateCardState(card, toTransform, toOpacity, duration) {
+        const fromTransform = card.style.transform || 'translate3d(0, 0, 0) scale(1)';
+        const fromOpacity = card.style.opacity || '1';
+        card.style.transform = toTransform;
+        card.style.opacity = toOpacity;
+        const animation = card.animate([
+          { transform: fromTransform, opacity: fromOpacity },
+          { transform: toTransform, opacity: toOpacity }
+        ], {
+          duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : duration,
+          easing: 'cubic-bezier(.4, 0, .6, 1)',
+          fill: 'both'
+        });
+        let finished = false;
+        const finish = () => {
+          if (finished) return;
+          finished = true;
+          animation.cancel();
+        };
+        animation.addEventListener('finish', finish, { once: true });
+        window.setTimeout(finish, duration + 100);
+      }
+
       function finishSwipe(direction) {
         if (isAnimating) return;
         const cards = visibleCards();
@@ -687,11 +759,36 @@
           : activeCardIndex;
         const card = activeCard();
         if (!direction || nextIndex === activeCardIndex) {
+          if (returningCard) {
+            isAnimating = true;
+            const returning = returningCard;
+            const entryDistance = Math.max(window.innerWidth, deckWidth) * 1.12;
+            animateCardState(card, 'translate3d(0, 0, 0) scale(1)', '1', 280);
+            animateCard(returning, `translate3d(${-entryDistance}px, -96px, 0) rotate(-18deg)`, () => {
+              clearReturningCard();
+              resetTransform(card);
+              isAnimating = false;
+              showUnderCard(1, 0);
+            });
+            return;
+          }
           isAnimating = true;
           showUnderCard(1, 0);
           animateCard(card, 'translate3d(0, 0, 0) rotate(0deg)', () => {
             isAnimating = false;
             resetTransform(card);
+          });
+          return;
+        }
+        if (direction < 0) {
+          isAnimating = true;
+          showReturningCard(Math.max(0, pointerDeltaX / Math.max(1, deckWidth)));
+          const returning = returningCard;
+          animateCardState(card, 'translate3d(0, 12px, 0) scale(.965)', '.78', 360);
+          animateCard(returning, 'translate3d(0, 0, 0) rotate(0deg)', () => {
+            activeCardIndex = nextIndex;
+            isAnimating = false;
+            renderActive();
           });
           return;
         }
