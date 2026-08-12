@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="card-analytics-endpoint" content="" />
   <title>Карточный продукт — каталог</title>
   <style>
     :root {
@@ -185,8 +186,14 @@
 
   <footer class="pagefoot" data-od-id="card-footer"><div class="container">Ни один продукт каталога не имеет статуса VERIFIED.</div></footer>
 
+  <script src="analytics.js"></script>
   <script>
     (() => {
+      const analytics = window.CardAnalytics;
+      analytics.sourceVisitOnce();
+      document.querySelectorAll('a[href="index.html"]').forEach((link) => {
+        link.href = analytics.decorateUrl(link.getAttribute('href'));
+      });
       const products = {
         'AFF-005': {
           name: 'Плати по миру — премиальная виртуальная', provider: 'ООО «КАПИБАРА» · Плати по миру', issuer: 'Эмитент не раскрыт', passport: 'Заявляет посредник', issue: '14 990 ₽', service: 'Первый год бесплатно', type: 'Виртуальная', network: 'Не подтверждено',
@@ -278,6 +285,7 @@
       document.querySelector('#unconfirmed-list').innerHTML = product.unconfirmed.map((item) => `<li><span class="mark">?</span><div>${item}</div></li>`).join('');
       document.querySelector('#card-id').textContent = id;
       document.querySelector('#source-label').textContent = product.source;
+      analytics.track('card_view', id);
     })();
   </script>
 </body>

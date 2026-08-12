@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="card-analytics-endpoint" content="" />
   <title>Карты за границей — каталог для граждан РФ</title>
   <style>
     :root {
@@ -413,13 +414,16 @@
     </div>
   </dialog>
 
+  <script src="analytics.js"></script>
   <script>
     (() => {
+      const analytics = window.CardAnalytics;
+      analytics.sourceVisitOnce();
       const makeProduct = (id, name, provider, issuer, status, passport, issue, service, type, network, capabilities, affiliate, price, conflict = false, details = null) => ({
         id, name, provider, issuer, status, conflict, passport, issue, service,
         type, network, capabilities, affiliate, price, rank: Number(id.slice(4)),
         tags: [type.includes('Виртуальная') ? 'virtual' : '', conflict ? 'conflict' : ''].filter(Boolean),
-        details: details || `card.html?id=${id}`
+        details: analytics.decorateUrl(details || `card.html?id=${id}`)
       });
 
       const products = [
@@ -504,7 +508,7 @@
         const statusBadges = `<span class="status status-${product.status}">${statusLabel}</span>${product.conflict ? '<span class="status status-conflict">CONFLICT</span>' : ''}`;
         const searchable = [product.name, product.provider, product.issuer, product.type, product.network, product.capabilities].join(' ');
         return `
-          <article class="offer offer-product" id="${slug}" tabindex="0" role="link" aria-label="Открыть ${escapeHtml(product.name)}" data-details="${product.details}" data-od-id="offer-card-${slug}" data-name="${escapeHtml(searchable)}" data-status="${product.status}" data-tags="${product.tags.join(' ')}" data-price="${product.price}" data-updated="2026-08-12" data-rank="${product.rank}" data-page="${product.page}" data-compare-name="${escapeHtml(product.name)}" data-conflict="${product.conflict}">
+          <article class="offer offer-product" id="${slug}" tabindex="0" role="link" aria-label="Открыть ${escapeHtml(product.name)}" data-offer-id="${product.id}" data-details="${product.details}" data-od-id="offer-card-${slug}" data-name="${escapeHtml(searchable)}" data-status="${product.status}" data-tags="${product.tags.join(' ')}" data-price="${product.price}" data-updated="2026-08-12" data-rank="${product.rank}" data-page="${product.page}" data-compare-name="${escapeHtml(product.name)}" data-conflict="${product.conflict}">
             <div class="offer-head">
               <div>
                 <div class="status-line">${statusBadges}<span class="updated">Проверено 12.08.2026</span></div>
@@ -629,6 +633,8 @@
         });
         showUnderCard(1, 0);
         updateSwipeState();
+        const current = activeCard();
+        if (current?.dataset.offerId) analytics.track('card_view', current.dataset.offerId);
       }
 
       function moveActiveCard(deltaX) {
@@ -747,9 +753,17 @@
       });
 
       offers.forEach((offer) => {
-        const openDetails = () => { window.location.href = offer.dataset.details; };
+        const openDetails = () => {
+          analytics.track('detail_open', offer.dataset.offerId);
+          window.location.href = offer.dataset.details;
+        };
         offer.addEventListener('click', (event) => {
           if (didDrag) { didDrag = false; return; }
+          const detailLink = event.target.closest('a[data-od-id^="details-"]');
+          if (detailLink) {
+            analytics.track('detail_open', offer.dataset.offerId);
+            return;
+          }
           if (event.target.closest('a, button, input, select, label')) return;
           openDetails();
         });
