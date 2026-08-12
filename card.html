@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Карточный продукт — каталог</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #f4f4f4;
+      --fg: #191c1f;
+      --muted: #505a63;
+      --border: #c9c9cd;
+      --border-soft: #e7e7ea;
+      --accent: #494fdf;
+      --accent-hover: color-mix(in oklab, var(--accent), black 8%);
+      --warn: #a85a00;
+      --danger: #c72f3d;
+      --font-display: "Aeonik Pro", "Inter", system-ui, sans-serif;
+      --font-body: "Inter", system-ui, sans-serif;
+      --font-mono: "SF Mono", ui-monospace, Menlo, monospace;
+      --radius-sm: 12px;
+      --radius-md: 20px;
+      --radius-pill: 9999px;
+      --focus-ring: 0 0 0 4px color-mix(in oklab, var(--accent) 22%, transparent);
+      --container: 980px;
+      --gutter: 36px;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; min-width: 0; overflow-x: clip; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.5; letter-spacing: .16px; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; color: inherit; }
+    h1, h2, h3, p { margin: 0; }
+    h1, h2, h3 { font-family: var(--font-display); font-weight: 500; text-wrap: balance; }
+    p { text-wrap: pretty; }
+    svg { display: block; flex: 0 0 auto; }
+    [hidden] { display: none !important; }
+    :focus-visible { outline: 0; box-shadow: var(--focus-ring); }
+    .container { width: min(100%, var(--container)); margin-inline: auto; padding-inline: var(--gutter); }
+
+    .topbar { position: sticky; top: 0; z-index: 30; border-bottom: 1px solid var(--border-soft); background: color-mix(in oklab, var(--bg) 94%, transparent); backdrop-filter: blur(16px); }
+    .topbar-inner { min-height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .back { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; font-weight: 650; }
+    .back:hover { color: var(--accent); }
+    .catalog-name { color: var(--muted); font-size: 12px; }
+
+    .summary { padding-block: 26px 20px; }
+    .status-line { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .status { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--radius-pill); font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .status-candidate { color: var(--muted); background: var(--surface); }
+    .status-conflict { color: var(--danger); background: color-mix(in oklab, var(--danger) 10%, var(--bg)); }
+    .checked { color: var(--muted); font-size: 11px; }
+    h1 { margin-top: 10px; font-size: clamp(34px, 5.8vw, 54px); line-height: 1; letter-spacing: -.03em; }
+    .provider { margin-top: 8px; color: var(--muted); font-size: 15px; }
+    .issuer { margin-top: 3px; font-size: 13px; }
+
+    .quick { padding-bottom: 22px; }
+    .quick-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-block: 1px solid var(--border-soft); }
+    .quick-item { min-width: 0; padding: 16px; }
+    .quick-item:first-child { padding-left: 0; }
+    .quick-item + .quick-item { border-left: 1px solid var(--border-soft); }
+    .quick-label { display: block; color: var(--muted); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
+    .quick-value { display: block; margin-top: 5px; font-size: 14px; font-weight: 750; line-height: 1.3; overflow-wrap: anywhere; }
+    .quick-value.is-conflict { color: var(--danger); }
+
+    .content { padding-block: 16px 72px; background: var(--surface); }
+    .content-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 12px; align-items: start; }
+    .stack { display: grid; gap: 12px; }
+    .panel { min-width: 0; padding: 21px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--bg); }
+    .panel h2 { font-size: 25px; line-height: 1.1; letter-spacing: -.4px; }
+    .panel-intro { margin-top: 7px; color: var(--muted); font-size: 12px; }
+    .detail-list { margin: 15px 0 0; padding: 0; list-style: none; }
+    .detail-list li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 9px; padding-block: 11px; border-top: 1px solid var(--border-soft); }
+    .mark { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; background: var(--surface); font-family: var(--font-mono); font-size: 9px; font-weight: 800; }
+    .detail-list small { display: block; margin-top: 3px; color: var(--muted); }
+    .risk-text { margin-top: 15px; padding-top: 14px; border-top: 1px solid var(--border-soft); font-size: 15px; font-weight: 650; }
+    .conflict-box { margin-top: 14px; padding: 13px; border: 1px solid color-mix(in oklab, var(--danger) 46%, var(--border)); border-radius: var(--radius-sm); }
+    .conflict-box span { display: block; color: var(--danger); font-family: var(--font-mono); font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+    .conflict-box strong { display: block; margin-top: 5px; color: var(--danger); font-size: 13px; }
+
+    .sidebar { position: sticky; top: 74px; display: grid; gap: 10px; }
+    .action-panel { padding: 19px; border-radius: var(--radius-md); background: var(--bg); }
+    .action-panel h2 { font-size: 20px; }
+    .action-panel p { margin-top: 7px; color: var(--muted); font-size: 12px; }
+    .blocked-button { min-height: 46px; width: 100%; display: inline-flex; align-items: center; justify-content: center; margin-top: 15px; padding: 10px 15px; border: 0; border-radius: var(--radius-pill); background: var(--surface); color: var(--muted); cursor: not-allowed; font-weight: 650; }
+    .meta-panel { padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+    .meta-panel span { display: block; color: var(--muted); font-size: 9px; letter-spacing: .05em; text-transform: uppercase; }
+    .meta-panel strong { display: block; margin-top: 4px; font-family: var(--font-mono); font-size: 11px; overflow-wrap: anywhere; }
+    .not-found { min-height: calc(100dvh - 60px); display: grid; place-items: center; padding-block: 48px; }
+    .not-found .panel { max-width: 520px; text-align: center; }
+    .not-found a { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; margin-top: 18px; padding: 9px 18px; border-radius: var(--radius-pill); background: var(--fg); color: var(--bg); font-weight: 650; }
+
+    .pagefoot { padding-block: 24px; border-top: 1px solid var(--border-soft); color: var(--muted); font-size: 11px; }
+
+    @media (max-width: 760px) {
+      :root { --gutter: 20px; }
+      .content-grid { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .quick-item:nth-child(3) { padding-left: 0; border-top: 1px solid var(--border-soft); border-left: 0; }
+      .quick-item:nth-child(4) { border-top: 1px solid var(--border-soft); }
+    }
+    @media (max-width: 520px) {
+      :root { --gutter: 12px; }
+      .topbar-inner { min-height: 56px; }
+      .catalog-name { display: none; }
+      .summary { padding-block: 18px 15px; }
+      h1 { margin-top: 8px; font-size: clamp(31px, 10vw, 40px); }
+      .provider { font-size: 13px; }
+      .quick { padding-bottom: 15px; }
+      .quick-item { padding: 12px 9px; }
+      .quick-label { font-size: 9px; }
+      .quick-value { font-size: 12px; }
+      .content { padding-block: 11px 28px; }
+      .panel { padding: 16px; border-radius: 16px; }
+      .panel h2 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar" data-od-id="card-topbar">
+    <div class="container topbar-inner">
+      <a class="back" href="index.html" data-od-id="back-to-catalog">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M19 12H5m5 5-5-5 5-5"/></svg>
+        Каталог
+      </a>
+      <span class="catalog-name">Карты за границей</span>
+    </div>
+  </header>
+
+  <main id="card-content">
+    <section class="summary" data-od-id="card-summary">
+      <div class="container">
+        <div class="status-line" id="status-line"></div>
+        <h1 id="card-title" data-od-id="card-title"></h1>
+        <p class="provider" id="card-provider"></p>
+        <p class="issuer" id="card-issuer"></p>
+      </div>
+    </section>
+
+    <section class="quick" data-od-id="card-key-values" aria-label="Главные параметры">
+      <div class="container quick-grid" id="quick-grid"></div>
+    </section>
+
+    <section class="content" data-od-id="card-details">
+      <div class="container content-grid">
+        <div class="stack">
+          <article class="panel" data-od-id="card-capabilities">
+            <h2>Возможности</h2>
+            <p class="panel-intro">Только сведения, зафиксированные в исследовательском файле.</p>
+            <ul class="detail-list" id="capability-list"></ul>
+          </article>
+
+          <article class="panel" data-od-id="card-risk">
+            <h2>Главный риск</h2>
+            <p class="risk-text" id="risk-text"></p>
+            <div class="conflict-box" id="conflict-box" hidden><span>CONFLICT</span><strong id="conflict-text"></strong></div>
+          </article>
+
+          <article class="panel" data-od-id="card-unconfirmed">
+            <h2>Что ещё не подтверждено</h2>
+            <ul class="detail-list" id="unconfirmed-list"></ul>
+          </article>
+        </div>
+
+        <aside class="sidebar" data-od-id="card-sidebar">
+          <div class="action-panel">
+            <h2>Оформление недоступно</h2>
+            <p>Продукт остаётся кандидатом. Каталог не передаёт данные провайдеру и не имитирует партнёрскую ссылку.</p>
+            <button class="blocked-button" type="button" disabled data-od-id="blocked-application">Заблокировано до проверки</button>
+          </div>
+          <div class="meta-panel"><span>Карточка</span><strong id="card-id"></strong></div>
+          <div class="meta-panel"><span>Проверено</span><strong>12.08.2026</strong></div>
+          <div class="meta-panel"><span>Источник</span><strong id="source-label"></strong></div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <section class="not-found" id="not-found" data-od-id="card-not-found" hidden>
+    <div class="container"><div class="panel"><h1>Карточка не найдена</h1><p class="panel-intro">Проверьте идентификатор продукта в адресе.</p><a href="index.html">Вернуться в каталог</a></div></div>
+  </section>
+
+  <footer class="pagefoot" data-od-id="card-footer"><div class="container">Ни один продукт каталога не имеет статуса VERIFIED.</div></footer>
+
+  <script>
+    (() => {
+      const products = {
+        'CARD-002': {
+          name: 'Wanttopay Easy', provider: 'WTP Technology Limited · Wanttopay', issuer: 'Эмитент не раскрыт', passport: 'Не подтверждено', issue: '990 ₽ / $10', service: '$6 / мес. · первый месяц бесплатно', type: 'Виртуальная', network: 'Не подтверждено',
+          capabilities: ['Виртуальная пополняемая карта для онлайн-платежей.', 'Минимальный депозит $10, месячный лимит $4 000.', 'Успешная и отменённая транзакции — по $0,25.'],
+          risk: 'Официальная страница одновременно указывает срок действия 12 и 24 месяца.', conflict: '',
+          unconfirmed: ['Банк-эмитент.', 'Возможность открытия по паспорту РФ.', 'Платёжная система.', 'Доставка, KYC и доступность конкретному гражданину РФ.'], source: 'Wanttopay · Банки.ру'
+        },
+        'CARD-003': {
+          name: 'Плати по миру — Для подписок', provider: 'ООО «КАПИБАРА» · Плати по миру', issuer: 'Эмитент не раскрыт', passport: 'Не подтверждено', issue: '2 990 ₽', service: 'Первый год бесплатно', type: 'Не подтверждено', network: 'Не подтверждено',
+          capabilities: ['Пополнение по СБП за 0 ₽ — заявление провайдера.', '3D Secure в приложении — заявление провайдера.', 'Комиссия операции $0,25 — заявление провайдера.'],
+          risk: 'Иностранный банк, эмитент и его лицензия не раскрыты.', conflict: '',
+          unconfirmed: ['Банк-эмитент и лицензия.', 'Возможность открытия по паспорту РФ.', 'Тип карты и платёжная система.', 'Доставка, KYC и работоспособность в конкретном сервисе.'], source: 'Плати по миру · Банки.ру'
+        },
+        'CARD-004': {
+          name: 'Плати по миру — Для путешествий', provider: 'ООО «КАПИБАРА» · Плати по миру', issuer: 'Эмитент не раскрыт', passport: 'Не подтверждено', issue: '3 990 ₽', service: 'Первый год бесплатно', type: 'Не подтверждено', network: 'Не подтверждено',
+          capabilities: ['Apple Pay, Google Pay, Alipay и WeChat — заявления провайдера.', 'Пополнение по СБП за 0 ₽ и 3D Secure в приложении — заявления провайдера.', 'Заявлен охват 190 стран.'],
+          risk: 'Эмитент не раскрыт, а заявленный охват не доказывает доступность карты гражданину РФ.', conflict: '',
+          unconfirmed: ['Банк-эмитент и лицензия.', 'Возможность открытия по паспорту РФ.', 'Тип карты и платёжная система.', 'Доставка, KYC и фактическая география работы.'], source: 'Плати по миру · Банки.ру'
+        },
+        'CARD-005': {
+          name: 'Плати по миру — Премиальная', provider: 'ООО «КАПИБАРА» · Плати по миру', issuer: 'Эмитент не раскрыт', passport: 'Не подтверждено', issue: '14 990 ₽', service: 'Первый год бесплатно', type: 'Не подтверждено', network: 'Не подтверждено',
+          capabilities: ['Выделенная поддержка — заявление провайдера.', 'Повышенный лимит — заявление провайдера.', 'Пополнение по СБП за 0 ₽ и 3D Secure в приложении — заявления провайдера.'],
+          risk: '«Лучший курс» является заявлением провайдера, а не фиксированным тарифом.', conflict: '',
+          unconfirmed: ['Банк-эмитент и лицензия.', 'Возможность открытия по паспорту РФ.', 'Тип карты и платёжная система.', 'Точный курс, доставка и KYC.'], source: 'Плати по миру · Банки.ру'
+        },
+        'CARD-006': {
+          name: 'SKYZIT Онлайн', provider: 'SKYZIT', issuer: 'Эмитент не раскрыт', passport: 'Заявляет посредник', issue: '41 990 ₽ / 36 990 ₽', service: 'Не подтверждено', type: 'Не подтверждено', network: 'Не подтверждено',
+          capabilities: ['Посредник заявляет удалённое оформление по паспорту РФ или загранпаспорту.'],
+          risk: 'Цена и обслуживание расходятся между официальным сайтом и Банки.ру.', conflict: 'Официальный сайт: 41 990 ₽. Банки.ру: 36 990 ₽ и 2 000 ₽ обслуживания.',
+          unconfirmed: ['Банк-эмитент.', 'Подтверждение паспорта РФ самим банком.', 'Официальная стоимость обслуживания.', 'Тип карты, платёжная система, доставка и KYC.'], source: 'SKYZIT · Банки.ру'
+        },
+        'CARD-007': {
+          name: 'SKYZIT Комфорт', provider: 'SKYZIT', issuer: 'Эмитент не раскрыт', passport: 'Заявляет посредник', issue: '44 990 ₽ / 39 990 ₽', service: 'Не подтверждено', type: 'Не подтверждено', network: 'Не подтверждено',
+          capabilities: ['Посредник заявляет удалённое оформление по паспорту РФ или загранпаспорту.'],
+          risk: 'Цена, обслуживание и сведения о банке расходятся между источниками.', conflict: 'Официальный сайт: 44 990 ₽, банк не назван. Банки.ру: 39 990 ₽, бесплатное обслуживание и вторичное упоминание Freedom Bank.',
+          unconfirmed: ['Банк-эмитент: вторичное упоминание не принято как подтверждение.', 'Подтверждение паспорта РФ самим банком.', 'Официальная стоимость обслуживания.', 'Тип карты, платёжная система, доставка и KYC.'], source: 'SKYZIT · Банки.ру'
+        },
+        'CARD-008': {
+          name: 'Halyk Bonus Digital', provider: 'Halyk Bank', issuer: 'Halyk Bank', passport: 'Не подтверждено', issue: 'Не подтверждено', service: '0 ₸ для digital', type: 'Виртуальная / digital', network: 'Не подтверждено',
+          capabilities: ['Валюты KZT, USD и EUR.', 'Apple Pay, Google Pay и Samsung Pay.', 'Пластик к digital: 0 ₸ первый год, затем 150 ₸ ежемесячно.'],
+          risk: 'На проверенной странице нет подтверждения открытия гражданином РФ без резидентства или личного визита.', conflict: '',
+          unconfirmed: ['Возможность открытия по паспорту РФ.', 'Требования к нерезиденту и необходимость личного визита.', 'Стоимость выпуска digital-карты.', 'Платёжная система и доставка пластика гражданину РФ.'], source: 'Halyk Bank'
+        },
+        'CARD-009': {
+          name: 'Ipak Yuli Visa Start Currency', provider: 'Ipak Yuli Bank', issuer: 'Ipak Yuli Bank', passport: 'Не подтверждено', issue: '0 UZS', service: '0 UZS', type: 'Физическая', network: 'Visa',
+          capabilities: ['Комиссия за оплату — 0%.', 'Заказ карты в приложении.', 'Доставка указана банком.'],
+          risk: 'Анкета нерезидента и онлайн-заказ не доказывают eligibility гражданина РФ.', conflict: '',
+          unconfirmed: ['Возможность открытия по паспорту РФ.', 'Требования к нерезиденту и KYC.', 'Доставка именно гражданину РФ и необходимость личного визита.'], source: 'Ipak Yuli Bank'
+        },
+        'CARD-010': {
+          name: 'Visa OptimaGOLD', provider: 'Optima Bank', issuer: 'Optima Bank', passport: 'Не подтверждено', issue: 'Бесплатно', service: 'Первый год бесплатно', type: 'Не подтверждено', network: 'Visa',
+          capabilities: ['Бесплатный выпуск.', 'Первый год обслуживания бесплатно.', 'Снятие до 100 000 сомов в месяц без комиссии в банкоматах Кыргызской Республики.'],
+          risk: 'Требования к гражданину РФ на проверенной странице не найдены.', conflict: '',
+          unconfirmed: ['Возможность открытия по паспорту РФ.', 'Требования к нерезиденту и KYC.', 'Стоимость обслуживания после первого года.', 'Доставка и необходимость личного визита.'], source: 'Optima Bank'
+        }
+      };
+
+      const id = new URLSearchParams(window.location.search).get('id');
+      const product = products[id];
+      if (!product) {
+        document.querySelector('#card-content').hidden = true;
+        document.querySelector('#not-found').hidden = false;
+        return;
+      }
+
+      document.title = `${product.name} — условия и риски`;
+      document.querySelector('#status-line').innerHTML = `<span class="status status-candidate">CANDIDATE</span>${product.conflict ? '<span class="status status-conflict">CONFLICT</span>' : ''}<span class="checked">Проверено 12.08.2026</span>`;
+      document.querySelector('#card-title').textContent = product.name;
+      document.querySelector('#card-provider').textContent = product.provider;
+      document.querySelector('#card-issuer').innerHTML = `<strong>Банк-эмитент:</strong> ${product.issuer}`;
+      document.querySelector('#quick-grid').innerHTML = [
+        ['Паспорт РФ', product.passport, false],
+        ['Выпуск', product.issue, Boolean(product.conflict)],
+        ['Обслуживание', product.service, false],
+        ['Тип / система', `${product.type} · ${product.network}`, false]
+      ].map(([label, value, conflict]) => `<div class="quick-item"><span class="quick-label">${label}</span><span class="quick-value${conflict ? ' is-conflict' : ''}">${value}</span></div>`).join('');
+      document.querySelector('#capability-list').innerHTML = product.capabilities.map((item) => `<li><span class="mark">✓</span><div>${item}</div></li>`).join('');
+      document.querySelector('#risk-text').textContent = product.risk;
+      if (product.conflict) {
+        document.querySelector('#conflict-box').hidden = false;
+        document.querySelector('#conflict-text').textContent = product.conflict;
+      }
+      document.querySelector('#unconfirmed-list').innerHTML = product.unconfirmed.map((item) => `<li><span class="mark">?</span><div>${item}</div></li>`).join('');
+      document.querySelector('#card-id').textContent = id;
+      document.querySelector('#source-label').textContent = product.source;
+    })();
+  </script>
+</body>
+</html>
