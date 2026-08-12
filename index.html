@@ -197,18 +197,21 @@
       border: 1px solid var(--border-soft);
       border-radius: var(--radius-md);
       background: var(--bg);
-      transform: translate3d(var(--swipe-x, 0px), var(--swipe-arc, 0px), 0) rotate(var(--swipe-tilt, 0deg));
+      transform: translate3d(0, 0, 0) rotate(0deg);
       transform-origin: 50% 105%;
-      transition: transform 440ms cubic-bezier(.32, 0, .67, 0);
+      transition: transform 320ms cubic-bezier(.22, .61, .36, 1);
       will-change: transform;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
     .offer.is-active { display: block; z-index: 2; }
     .offer.is-under {
       display: block;
       z-index: 1;
       pointer-events: none;
-      opacity: var(--under-opacity, .78);
-      transform: translate3d(0, var(--under-y, 12px), 0) scale(var(--under-scale, .965));
+      opacity: .78;
+      transform: translate3d(0, 12px, 0) scale(.965);
+      transition: transform 260ms cubic-bezier(.22, .61, .36, 1), opacity 220ms linear;
       box-shadow: 0 12px 34px color-mix(in oklab, var(--fg) 12%, transparent);
     }
     .offer-list.is-swiping .offer.is-active { transition: none; }
@@ -272,7 +275,7 @@
     .offer-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 15px; padding-top: 13px; border-top: 1px solid var(--border-soft); }
     .evidence-note { max-width: 52ch; color: var(--muted); font-size: 11px; }
 
-    .swipe-nav { width: min(100%, 260px); min-height: 54px; display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 12px; margin: -74px auto 12px; padding: 5px; position: relative; z-index: 10; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); background: color-mix(in oklab, var(--bg) 94%, transparent); backdrop-filter: blur(14px); }
+    .swipe-nav { width: min(100%, 260px); min-height: 54px; display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 12px; margin: -74px auto 12px; padding: 5px; position: relative; z-index: 10; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); background: var(--bg); }
     .swipe-button { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 50%; background: var(--bg); cursor: pointer; }
     .swipe-button:disabled { opacity: .3; cursor: default; }
     .swipe-state { color: var(--muted); text-align: center; }
@@ -670,6 +673,11 @@
       let pointerDeltaX = 0;
       let activePointerId = null;
       let didDrag = false;
+      let swipeFrame = 0;
+      let deckWidth = list.clientWidth;
+      let underCard = null;
+      let isAnimating = false;
+      const cardDeck = [welcomeCard, ...offers];
 
       function wordForCount(count) {
         if (count % 10 === 1 && count % 100 !== 11) return 'предложение';
@@ -682,7 +690,7 @@
       }
 
       function visibleCards() {
-        return [welcomeCard, ...visibleOffers()];
+        return cardDeck;
       }
 
       function updateSwipeState() {
@@ -696,9 +704,8 @@
       function activeCard() { return visibleCards()[activeCardIndex]; }
 
       function resetTransform(card) {
-        card.style.setProperty('--swipe-x', '0px');
-        card.style.setProperty('--swipe-arc', '0px');
-        card.style.setProperty('--swipe-tilt', '0deg');
+        card.style.transform = '';
+        card.style.opacity = '';
       }
 
       function underIndexFor(direction = 1) {
@@ -711,16 +718,26 @@
       function showUnderCard(direction = 1, progress = 0) {
         const cards = visibleCards();
         const underIndex = underIndexFor(direction);
-        cards.forEach((card, index) => card.classList.toggle('is-under', index === underIndex && index !== activeCardIndex));
-        const under = cards[underIndex];
+        const nextUnder = underIndex === activeCardIndex ? null : cards[underIndex];
+        if (underCard !== nextUnder) {
+          if (underCard) {
+            underCard.classList.remove('is-under');
+            resetTransform(underCard);
+          }
+          underCard = nextUnder;
+          if (underCard) underCard.classList.add('is-under');
+        }
+        const under = underCard;
         if (!under) return;
         const reveal = Math.max(0, Math.min(1, progress));
-        under.style.setProperty('--under-scale', String(.965 + reveal * .035));
-        under.style.setProperty('--under-y', `${12 - reveal * 12}px`);
-        under.style.setProperty('--under-opacity', String(.78 + reveal * .22));
+        const scale = .965 + reveal * .035;
+        const y = 12 - reveal * 12;
+        under.style.transform = `translate3d(0, ${y}px, 0) scale(${scale})`;
+        under.style.opacity = String(.78 + reveal * .22);
       }
 
       function renderActive() {
+        underCard = null;
         visibleCards().forEach((card, index) => {
           card.classList.toggle('is-active', index === activeCardIndex);
           card.classList.remove('is-under');
@@ -733,49 +750,72 @@
 
       function moveActiveCard(deltaX) {
         const card = activeCard();
-        const limitedX = Math.max(-list.clientWidth, Math.min(list.clientWidth, deltaX));
-        const progress = limitedX / Math.max(1, list.clientWidth);
+        const limitedX = Math.max(-deckWidth, Math.min(deckWidth, deltaX));
+        const progress = limitedX / Math.max(1, deckWidth);
         const arc = -Math.pow(Math.abs(progress), 1.35) * 42;
         showUnderCard(limitedX > 0 ? -1 : 1, Math.abs(progress));
-        card.style.setProperty('--swipe-x', `${limitedX}px`);
-        card.style.setProperty('--swipe-arc', `${arc}px`);
-        card.style.setProperty('--swipe-tilt', `${progress * 12}deg`);
+        card.style.transform = `translate3d(${limitedX}px, ${arc}px, 0) rotate(${progress * 12}deg)`;
+      }
+
+      function queueActiveCardMove() {
+        if (swipeFrame) return;
+        swipeFrame = window.requestAnimationFrame(() => {
+          swipeFrame = 0;
+          moveActiveCard(pointerDeltaX);
+        });
       }
 
       function finishSwipe(direction) {
+        if (isAnimating) return;
         const cards = visibleCards();
         const nextIndex = Math.max(0, Math.min(cards.length - 1, activeCardIndex + direction));
         const card = activeCard();
         if (!direction || nextIndex === activeCardIndex) {
-          resetTransform(card);
-          showUnderCard(1, 0);
+          isAnimating = true;
+          let settled = false;
+          const completeReturn = () => {
+            if (settled) return;
+            settled = true;
+            isAnimating = false;
+          };
+          card.addEventListener('transitionend', (event) => {
+            if (event.propertyName === 'transform') completeReturn();
+          }, { once: true });
+          window.requestAnimationFrame(() => {
+            resetTransform(card);
+            showUnderCard(1, 0);
+          });
+          window.setTimeout(completeReturn, 420);
           return;
         }
-        showUnderCard(direction, 1);
+        isAnimating = true;
         card.classList.add('is-leaving');
-        const exitX = direction > 0 ? -Math.max(window.innerWidth, list.clientWidth) * 1.45 : Math.max(window.innerWidth, list.clientWidth) * 1.45;
-        card.style.setProperty('--swipe-x', `${exitX}px`);
-        card.style.setProperty('--swipe-arc', '-96px');
-        card.style.setProperty('--swipe-tilt', `${direction > 0 ? -18 : 18}deg`);
+        const exitX = direction > 0 ? -Math.max(window.innerWidth, deckWidth) * 1.45 : Math.max(window.innerWidth, deckWidth) * 1.45;
         let completed = false;
         const completeTurn = () => {
           if (completed) return;
           completed = true;
+          isAnimating = false;
           activeCardIndex = nextIndex;
           renderActive();
         };
         card.addEventListener('transitionend', (event) => {
           if (event.propertyName === 'transform') completeTurn();
         }, { once: true });
-        window.setTimeout(completeTurn, 560);
+        window.requestAnimationFrame(() => {
+          showUnderCard(direction, 1);
+          card.style.transform = `translate3d(${exitX}px, -96px, 0) rotate(${direction > 0 ? -18 : 18}deg)`;
+        });
+        window.setTimeout(completeTurn, 420);
       }
 
       list.addEventListener('pointerdown', (event) => {
-        if (event.target.closest('a, button, input, select, label')) return;
+        if (isAnimating || event.target.closest('a, button, input, select, label')) return;
         activePointerId = event.pointerId;
         pointerStartX = event.clientX;
         pointerDeltaX = 0;
         didDrag = false;
+        deckWidth = list.clientWidth;
         list.setPointerCapture(event.pointerId);
         list.classList.add('is-swiping');
       });
@@ -783,14 +823,20 @@
         if (event.pointerId !== activePointerId) return;
         pointerDeltaX = event.clientX - pointerStartX;
         if (Math.abs(pointerDeltaX) > 6) didDrag = true;
-        moveActiveCard(pointerDeltaX);
+        queueActiveCardMove();
         event.preventDefault();
       });
       function releasePointer(event) {
         if (event.pointerId !== activePointerId) return;
+        if (swipeFrame) {
+          window.cancelAnimationFrame(swipeFrame);
+          swipeFrame = 0;
+        }
+        moveActiveCard(pointerDeltaX);
+        activeCard().getBoundingClientRect();
         list.classList.remove('is-swiping');
         activePointerId = null;
-        const threshold = Math.min(92, list.clientWidth * .22);
+        const threshold = Math.min(92, deckWidth * .22);
         const direction = Math.abs(pointerDeltaX) >= threshold ? (pointerDeltaX < 0 ? 1 : -1) : 0;
         finishSwipe(direction);
       }
@@ -802,7 +848,10 @@
       }
       swipePrev.addEventListener('click', () => goToCard(-1));
       swipeNext.addEventListener('click', () => goToCard(1));
-      window.addEventListener('resize', () => resetTransform(activeCard()));
+      window.addEventListener('resize', () => {
+        deckWidth = list.clientWidth;
+        resetTransform(activeCard());
+      });
 
       offers.forEach((offer) => {
         const openDetails = () => { window.location.href = offer.dataset.details; };
