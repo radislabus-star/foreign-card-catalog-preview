@@ -697,8 +697,8 @@
         const visible = visibleCards();
         swipeCurrent.textContent = activeCardIndex + 1;
         swipeTotal.textContent = visible.length;
-        swipePrev.disabled = activeCardIndex === visible.length - 1;
-        swipeNext.disabled = activeCardIndex === 0;
+        swipePrev.disabled = visible.length < 2;
+        swipeNext.disabled = visible.length < 2;
       }
 
       function activeCard() { return visibleCards()[activeCardIndex]; }
@@ -710,9 +710,8 @@
 
       function underIndexFor(direction = 1) {
         const cards = visibleCards();
-        if (direction < 0 && activeCardIndex > 0) return activeCardIndex - 1;
-        if (activeCardIndex < cards.length - 1) return activeCardIndex + 1;
-        return activeCardIndex > 0 ? activeCardIndex - 1 : -1;
+        if (cards.length < 2) return -1;
+        return (activeCardIndex + direction + cards.length) % cards.length;
       }
 
       function showUnderCard(direction = 1, progress = 0) {
@@ -793,7 +792,9 @@
       function finishSwipe(direction) {
         if (isAnimating) return;
         const cards = visibleCards();
-        const nextIndex = Math.max(0, Math.min(cards.length - 1, activeCardIndex + direction));
+        const nextIndex = direction && cards.length > 1
+          ? (activeCardIndex + direction + cards.length) % cards.length
+          : activeCardIndex;
         const card = activeCard();
         if (!direction || nextIndex === activeCardIndex) {
           isAnimating = true;
